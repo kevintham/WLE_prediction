@@ -1,0 +1,30 @@
+---
+title: "Prediction of Human Physical Activity Execution Quality"
+author: "Kevin Tham"
+date: "May 18, 2018"
+output:
+  html_document:
+    keep_md: true
+---
+
+
+
+
+```r
+if (!require("pacman"))
+  install.packages("pacman", repos = "http://cran.us.r-project.org")
+pacman::p_load(knitr, dplyr, ggplot2, GGally, tidyr, grid, gridExtra, car, broom, tibble)
+```
+
+
+```r
+url1 <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv'
+url2 <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv'
+destfile1 <- 'pml-training.csv'
+destfile2 <- 'pml-testing.csv'
+  
+if (!file.exists(destfile1))
+  download.file(url1, destfile1, method = "auto")
+if (!file.exists(destfile2))
+  download.file(url2, destfile2, method = "auto")
+```
