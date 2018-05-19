@@ -8,6 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+rm(list=ls())
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -28,4 +29,24 @@ if (!file.exists(destfile1))
 if (!file.exists(destfile2))
   download.file(url2, destfile2, method = "auto")
 
+train <- read.csv(destfile1)
+test <- read.csv(destfile2)
+
+ytrain <- train$classe
+ytest <- test$classe
+
+train <- train[,-160]
+test <- test[,-160]
+
+dim(train)
+dim(test)
+
+na_count <- sapply(train, function(y) sum(is.na(y)))
+na_count
+
+nacols <- which(na_count>100)
+train <- select(train, -nacols)
+test <- select(test, -nacols)
+
+str(train)
 ```
