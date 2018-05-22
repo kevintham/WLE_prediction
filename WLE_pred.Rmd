@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, message=FALSE}
 if (!require("pacman"))
   install.packages("pacman", repos = "http://cran.us.r-project.org")
-pacman::p_load(knitr, dplyr, ggplot2, GGally, tidyr, grid, gridExtra, car, broom, tibble)
+pacman::p_load(knitr, dplyr, ggplot2, GGally, tidyr, car, broom, tibble, caret, data.table, xgboost, class)
 ```
 
 ```{r}
@@ -29,24 +29,65 @@ if (!file.exists(destfile1))
 if (!file.exists(destfile2))
   download.file(url2, destfile2, method = "auto")
 
-train <- read.csv(destfile1)
-test <- read.csv(destfile2)
+train <- fread(destfile1, na.strings = c("NA", "", "#DIV/0!"))
+test <- fread(destfile2, na.strings = c("NA", "", "#DIV/0!"))
 
-ytrain <- train$classe
-ytest <- test$classe
+ggplot(train, aes(x=cvtd_timestamp,y=classe)) + geom_boxplot()
+ggplot(train, aes(x=classe,y=user_name)) + geom_boxplot()
+
+
+ytrain <- as.factor(train$classe)
+ytest <- as.factor(test$classe)
 
 train <- train[,-160]
 test <- test[,-160]
 
-dim(train)
+nrows <- dim(train)[1]
 dim(test)
 
+```
+
+```{r}
 na_count <- sapply(train, function(y) sum(is.na(y)))
-na_count
 
 nacols <- which(na_count>100)
 train <- select(train, -nacols)
 test <- select(test, -nacols)
 
 str(train)
+
+train <- select(train, -c(1:7))
+test <- select(test, -c(1:7))
+```
+
+```{r}
+set.seed(100)
+
+trainmat <- model.matrix(~.-1,train)
+#cvxg <- train(train, ytrain, method='xgboost')
+#cvxg <- xgb.cv(params=list('objective'='multi:softprob','eval_metric'='mlogloss','num_class'=5), xgtrain, nrounds=500, nfold=5, label=as.numeric(ytrain)-1, print_every_n=10,early_stopping_rounds = 10)
+
+#cvxg <- xgboost(trainmat, label=as.numeric(ytrain)-1, params=list('objective'='multi:softprob', 'num_class'=5),  nrounds=100)
+
+```
+
+```{r, eval=FALSE}
+trainpredlong <- predict(cvxg,xgtrain)
+trainpredvec <- matrix(trainpredlong, nrow=nrows,byrow=TRUE)
+
+dim(trainpredvec)
+trainpred <- apply(trainpredvec, 1,which.max)
+
+trainpred <- factor(trainpred)
+levels(trainpred) <- list(A=1,B=2,C=3,D=4,E=5)
+
+
+confusionMatrix(trainpred, ytrain)
+```
+
+
+```{r}
+knnmod <- knn(trainmat, trainmat, ytrain, k=5)
+
+confusionMatrix(knnmod, ytrain)
 ```
