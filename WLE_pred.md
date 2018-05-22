@@ -142,6 +142,81 @@ test <- select(test, -c(1:7))
 set.seed(100)
 
 trainmat <- model.matrix(~.-1,train)
+
+outfolds <- 5
+nfolds <- createFolds(ytrain, k=outfolds)
+
+nestedFolds <- function(nfolds) {
+  n <- length(nfolds)
+  
+  nestfolds <- list()
+  for (i in 1:n) {
+    nestfolds[[i]] <- nfolds[-i]
+  }
+  nestfolds
+}
+
+
+nestfolds <- nestedFolds(nfolds)
+
+paramslist <- list('objective'='multi:softprob', 'num_class'=5)
+```
+
+
+```r
+xgb.predmult <- function(train,label,params,nrounds,test) {
+  xgbmod <- xgboost(train,as.numeric(label)-1,params=params,nrounds=nrounds)
+  predlong <- predict(xgbmod, test)
+  nrows <- dim(test)[1]
+  predmat <- matrix(predlong,nrow=nrows,byrow=TRUE)
+  predmat
+}
+
+# testing
+#head(xgb.predmult(trainmat[-nfolds[[1]],], ytrain[-nfolds[[1]]], paramslist,10, trainmat[nfolds[[1]],]))
+```
+
+
+```r
+knn.predmult <- function(train,label,k,test) {
+  knnmod <- knn(train, test, label, k)
+  predmat <- model.matrix(~.-1, data=data.frame('y'=knnmod))
+}
+
+# testing
+head(knn.predmult(trainmat[-nfolds[[1]],], ytrain[-nfolds[[1]]], 5, trainmat[nfolds[[1]],]))
+```
+
+```
+##   yA yB yC yD yE
+## 1  1  0  0  0  0
+## 2  1  0  0  0  0
+## 3  1  0  0  0  0
+## 4  1  0  0  0  0
+## 5  1  0  0  0  0
+## 6  1  0  0  0  0
+```
+
+
+
+
+```r
+for (k in 1:outfolds) {
+  
+  foldtest <- trainmat[nfolds[[k]],]
+  foldtrain <- trainmat[-nfolds[[k]],]
+  foldtesty <- ytrain[nfolds[[k]]]
+  foldtrainy <- ytrain[-nfolds[[k]]]
+  
+  # train on rest of folds
+  xgmod <- xgboost(foldtrain, label=as.numeric(foldtrainy)-1, params=paramslist, nrounds=100)
+  
+  
+}
+```
+
+
+```r
 #cvxg <- train(train, ytrain, method='xgboost')
 #cvxg <- xgb.cv(params=list('objective'='multi:softprob','eval_metric'='mlogloss','num_class'=5), xgtrain, nrounds=500, nfold=5, label=as.numeric(ytrain)-1, print_every_n=10,early_stopping_rounds = 10)
 
@@ -169,38 +244,4 @@ confusionMatrix(trainpred, ytrain)
 knnmod <- knn(trainmat, trainmat, ytrain, k=5)
 
 confusionMatrix(knnmod, ytrain)
-```
-
-```
-## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    A    B    C    D    E
-##          A 5530   59    9   12   11
-##          B   15 3635   38    3   28
-##          C   13   50 3335   79   24
-##          D   20   29   24 3101   42
-##          E    2   24   16   21 3502
-## 
-## Overall Statistics
-##                                           
-##                Accuracy : 0.9736          
-##                  95% CI : (0.9712, 0.9758)
-##     No Information Rate : 0.2844          
-##     P-Value [Acc > NIR] : < 2.2e-16       
-##                                           
-##                   Kappa : 0.9665          
-##  Mcnemar's Test P-Value : 3.192e-16       
-## 
-## Statistics by Class:
-## 
-##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.9910   0.9573   0.9746   0.9642   0.9709
-## Specificity            0.9935   0.9947   0.9898   0.9930   0.9961
-## Pos Pred Value         0.9838   0.9774   0.9526   0.9642   0.9823
-## Neg Pred Value         0.9964   0.9898   0.9946   0.9930   0.9935
-## Prevalence             0.2844   0.1935   0.1744   0.1639   0.1838
-## Detection Rate         0.2818   0.1853   0.1700   0.1580   0.1785
-## Detection Prevalence   0.2865   0.1895   0.1784   0.1639   0.1817
-## Balanced Accuracy      0.9923   0.9760   0.9822   0.9786   0.9835
 ```
